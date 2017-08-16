@@ -1,0 +1,4 @@
+executable/*
+!executable/.gitkeep
+.idea
+cmake-build-debug
