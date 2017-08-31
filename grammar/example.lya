@@ -1,0 +1,27 @@
+type list = struct (x, y int, next ref list);
+dcl head, tail ref list;
+
+new(head);
+new(tail);
+head->.x = 1; head->.y = 2; head->.next = tail;
+tail->.x = 3; tail->.y = 4; tail->.next = null;
+
+type vector = array[1:100] int;
+dcl r ref vector, aux array[1:10] int;
+
+do
+  for i in int(1:10);  // range enumeration loop counter with type int(1:10)
+    aux[i] = 1;
+od;
+
+do
+  for j in aux; // location enumeration loop counter
+    print(j);
+od;
+
+new(r);
+do
+  for k in r->;
+    k = 5;
+od;
+free(r);

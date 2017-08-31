@@ -1,0 +1,360 @@
+# =================================================================
+# lya.bnf
+#
+# This file defines the grammar for lya programming Language.
+# This language combine features of some modern languages.
+# The purpose of "lya" is the use in compiler construction courses
+#
+# Copyright (C) 2015, Marcio Machado Pereira
+# License: BSD
+# =================================================================
+
+Notation
+    { ... }*   repetition possibly zero times
+    { ... }+   repetition at least once
+    [ ... ]    optional
+    ... | ...  alternative
+
+Reserved words
+    ARRAY, BY, CHARS, DCL, DO, DOWN, ELSE, ELSIF, END, EXIT, FI,
+    FOR, IF, IN, LOC, TYPE, OD, PROC, REF, RESULT, RETURN, RETURNS,
+    SYN, THEN, TO, WHILE, ASSERT
+
+Predefined words
+        BOOL, CHAR, FALSE, INT, LENGTH, LOWER, NULL, NUM,
+        PRED, PRINT, READ, SUCC, TRUE, UPPER, NEW, FREE
+
+<program> ::=
+    { <statement> }+
+
+<statement> ::=
+      <declaration_statement>
+      | <synonym_statement>
+      | <newmode_statement>
+      | <procedure_statement>
+      | <action_statement>
+
+<declaration_statement> ::= DCL <declaration_list> ;
+
+<declaration_list> ::= <declaration> { , <declaration> }*
+
+<declaration> ::= <identifier_list> <mode> [ <initialization> ]
+
+<initialization> ::=  <assignment_symbol> <expression>
+
+<identifier_list> ::= <identifier> { , <identifier> }*
+
+<identifier> ::= [a-zA-Z_][a-zA-Z_0-9]*
+
+<synonym_statement> ::= SYN <synonym_list> ;
+
+<synonym_list> ::= <synonym_definition> { , <synonym_definition> }*
+
+<synonym_definition> ::= <identifier_list> [ <mode> ] = <constant_expression>
+
+<constant_expression> ::= <expression>
+
+<newmode_statement> ::= TYPE <newmode_list> ;
+
+<newmode_list> ::= <mode_definition> { , <mode_definition> }*
+
+<mode_definition> ::= <identifier_list> = <mode>
+
+<mode> ::=
+       <mode_name>
+       | <discrete_mode>
+       | <reference_mode>
+       | <composite_mode>
+
+<discrete_mode> ::=
+      <integer_mode>
+      | <boolean_mode>
+      | <character_mode>
+      | <discrete_range_mode>
+
+<integer_mode> ::=  INT
+
+<boolean_mode> ::=  BOOL
+
+<character_mode> ::= CHAR
+
+<discrete_range_mode> ::=
+      <discrete_mode_name> LPAREN <literal_range> RPAREN
+      | <discrete_mode> LPAREN <literal_range> RPAREN
+
+<discrete_mode_name> ::= <identifier>
+
+<literal_range> ::= <lower_bound> : <upper_bound>
+
+<lower_bound> ::= <integer_literal>
+
+<upper_bound> ::= <integer_literal>
+
+<reference_mode> ::= REF <mode>
+
+<composite_mode> ::=
+        <string_mode>
+      | <array_mode>
+      | <struct_mode>
+
+<string_mode> ::= CHARS LBRACKET <string_length> RBRACKET
+
+<string_length> ::= <integer_literal_expression>
+
+<string_mode_name> ::= <identifier>
+
+<array_mode> ::= ARRAY LBRACKET <index_mode> { , <index_mode> }* RBRACKET <element_mode>
+
+<index_mode> ::= <literal_range>
+
+<element_mode> ::= <mode>
+
+<array_mode_name> ::= <identifier>
+
+<struct_mode> ::= STRUCT LPAREN <field_list> RPAREN
+
+<field_list> ::= <field> { , <field> }*
+
+<field> ::= <identifier_list> <mode>
+
+<location> ::=
+      <location_name>
+      | <dereferenced_reference>
+      | <string_element>
+      | <array_element>
+      | <array_slice>
+      | <procedure_call>
+
+<dereferenced_reference> ::= <primitive_value> ->
+
+<string_element> ::= <string_location> LBRACKET <start_element> RBRACKET
+
+<start_element> ::= <integer_expression>
+
+<left_element> ::= <integer_expression>
+
+<right_element> ::= <integer_expression>
+
+<array_element> ::= <array_location> LBRACKET <expression_list> RBRACKET
+
+<expression_list> ::= <expression> { , <expression> }*
+
+<array_slice> ::= <array_location> LBRACKET <lower_element> : <upper_element> RBRACKET
+
+<lower_element> ::= <expression>
+
+<upper_element> ::= <expression>
+
+<primitive_value> ::=
+      <literal>
+      | <value_array_element>
+      | <value_array_slice>
+      | <primitive_value <parenthesized_expression>
+
+<value_name> ::= <synonym_name> | <value_enumeration_name>
+
+<synonym_name> ::= <identifier>
+
+<value_enumeration_name> ::= <identifier>
+
+literal> ::=
+      <integer_literal>
+      | <boolean_literal>
+      | <character_literal>
+      | <empty_literal>
+      | <character_string_literal>
+
+<integer_literal> ::=  <digit_sequence>
+
+<digit_sequence> ::= { <digit> | _ }+
+
+<boolean_literal> ::= FALSE | TRUE
+
+<character_literal> ::= '<character>' | '^( <integer_literal> )'
+
+<empty_literal> ::= NULL
+
+<character_string_literal> ::= " { <character> | <quote> }* "
+
+<quote> ::= ""
+<value_array_element> ::= <array_primitive_value> LBRACKET <expression_list> RBRACKET
+
+<value_array_slice> ::= <array_primitive_value> LBRACKET <lower_element> : <upper_element> RBRACKET
+
+<array_primitive_value> ::= <primitive_value>
+
+<parenthesized_expression> ::= LPAREN <expression> RPAREN
+
+<expression> ::= <operand0> | <conditional_expression>
+
+<conditional_expression> ::=
+    IF <boolean_expression> <then_expression> <else_expression> FI
+    | IF <boolean_expression> <then_expression> <elsif_expression> <else_expression> FI
+
+<boolean_expression> ::= <expression>
+
+<then_expression> ::= THEN <expression>
+
+<else_expression> ::= ELSE <expression>
+
+<elsif_expression> ::=
+    ELSIF <boolean_expression> <then_expression>
+    | <elsif_expression> ELSIF <boolean_expression> <then_expression>
+
+<operand0> ::=
+      <operand1>
+      | <operand0> <operator1> <operand1>
+
+<operator1> ::=
+      <relational_operator>
+      | <membership_operator>
+
+<relational_operator> ::= && | || | ! | == | != | > | >= | < | <=
+
+<membership_operator> ::= IN
+
+<operand1> ::=
+      <operand2>
+      | <operand1> <operator2> <operand2>
+
+<operator2> ::=
+      <arithmetic_additive_operator>
+      | <string_concatenation_operator>
+
+<arithmetic_additive_operator> ::= +|-
+
+<string_concatenation_operator> ::= &
+
+<operand2> ::=
+      <operand3>
+      | <operand2> <arithmetic_multiplicative_operator> <operand3>
+
+<arithmetic_multiplicative_operator> ::=  ∗ | / | %
+
+<operand3> ::=
+      [ <monadic_operator> ] <operand4>
+      | <integer_literal>
+
+<monadic_operator> ::= - | !
+
+<operand4> ::=  <referenced_location> | <primitive_value>
+
+<referenced_location> ::= -> <location>
+
+<action_statement> ::= [ <label_id> : ] <action> ;
+
+<label_id> ::= <identifier>
+
+<action> ::=
+     <bracketed_action>
+     | <assert_action>
+     | <assignment_action>
+     | <call_action>
+     | <exit_action>
+     | <return_action>
+     | <result_action>
+
+<bracketed_action> ::= <if_action> | <do_action>
+
+<assert_action> ::= ASSERT <boolean_expression> ;
+
+<assignment_action> ::=	<location> <assigning_operator> <expression>
+
+<assigning_operator> ::= <closed_dyadic_operator> <assignment_symbol>
+
+<closed_dyadic_operator> ::=
+    <arithmetic_additive_operator>
+    | <arithmetic_multiplicative_operator>
+    | <string_concatenation_operator>
+
+<assignment_symbol> ::= =
+
+<if_action> ::= IF <boolean_expression> <then_clause> [ <else_clause> ] FI
+
+<then_clause> ::= THEN <action_statement_list>
+
+<else_clause> ::=
+      ELSE <action_statement_list>
+      | ELSIF <boolean_expression> <then_clause> [ <else_clause> ]
+
+<do_action> ::= DO [ <control_part> ; ] <action_statement_list> OD
+
+<control_part> ::=
+        <for_control> [ <while_control> ]
+        | <while_control>
+
+<for_control> ::= FOR { <iteration> }
+
+<iteration> ::= <value_enumeration> | <location_enumeration>
+
+<value_enumeration> ::= <step_enumeration> | <range_enumeration>
+
+<step_enumeration> ::=
+          <loop_counter> <assignment_symbol>
+      <start_value> [ <step_value> ] [ DOWN ] <end_value>
+
+<loop_counter> ::= <identifier>
+
+<start_value> ::= <discrete_expression>
+
+<step_value> ::= BY <integer_expression>
+
+<end_value> ::= TO <discrete_expression>
+
+<range_enumeration> ::= <loop_counter> [ DOWN ] IN <discrete_mode_name>
+
+<location_enumeration> ::= <loop_counter> [ DOWN ] IN <composite_object>
+
+<composite_object> ::=
+       <array_location>
+       | <array_expression>
+       | <string_location>
+       | <string_expression>
+
+<while_control> ::= WHILE <boolean_expression>
+
+<call_action> ::=  <procedure_call> | <builtin_call>
+
+<procedure_call> ::= { <procedure_name> } LPAREN [ <parameter_list> ] RPAREN
+
+<parameter_list> ::= <parameter> { , <parameter> }*
+
+<parameter> ::= <expression>
+
+<exit_actiom> ::= EXIT label_id
+
+<return_action> ::= RETURN [ <result> ]
+
+<result_action> ::= RESULT <result>
+
+<result> ::= <expression>
+
+<builtin_call> ::= <builtin_name> LPAREN [ <parameter_list> ] RPAREN
+
+<builtin_name> ::= NUM | PRED | SUCC | UPPER | LOWER | LENGTH | READ | WRITE | NEW | FREE
+
+<procedure_statement> ::= <label_id> : <procedure_definition> ;
+
+<procedure_definition> ::=
+       PROC LPAREN [ <formal_parameter_list> ] RPAREN [ <result_spec> ];
+       { <action_statement> }* END
+
+<formal_parameter_list> ::= <formal_parameter> { , <formal_parameter> }*
+
+<formal_parameter> ::= <identifier_list> <parameter_spec>
+
+<parameter_spec> ::=  <mode> [ <parameter_attribute> ]
+
+<parameter_attribute> ::= LOC
+
+<result_spec> ::= RETURNS LPAREN <mode> [ <result_attribute> ] RPAREN
+
+<result_attribute>::= LOC
+
+<comment> ::= <bracketed_comment> | <line_end_comment>
+
+<bracketed_comment> ::= /* <character_string> */
+
+<line_end_comment> ::= // <character_string> <end_of_line>
+
+<character_string> ::= { <character> }*
