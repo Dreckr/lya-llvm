@@ -23,3 +23,4 @@
 - How to get started with LLVM-C - https://pauladamsmith.com/blog/2015/01/how-to-get-started-with-llvm-c-api.html
 - Lya Program Examples - https://iviarcio.wordpress.com/lya-program-examples/
 - Lya BNF Grammar - https://iviarcio.wordpress.com/lya-bnf-grammar/
+- PyKaleidoscope - http://eli.thegreenplace.net/2015/building-and-using-llvmlite-a-basic-example
