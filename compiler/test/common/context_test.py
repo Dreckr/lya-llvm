@@ -4,7 +4,7 @@ from compiler.common.context import *
 
 mode = Mode(name="Foo")
 symbol = Symbol(name="bar", symbol_type=Type(mode))
-definition = Definition(symbol=symbol, register_id=1)
+definition = Definition(symbol=symbol, value=None)
 constant = Constant(symbol, 10)
 
 
@@ -76,11 +76,6 @@ class LyaContextTest(unittest.TestCase):
 
     def test_find_constant_returns_none(self):
         self.assertEqual(self.context.find_constant(symbol), None)
-
-    def test_next_register_increments(self):
-        self.assertEqual(self.context.next_register(), 1)
-        self.assertEqual(self.context.next_register(), 2)
-        self.assertEqual(self.context.next_register(), 3)
 
 
 if __name__ == "__main__":

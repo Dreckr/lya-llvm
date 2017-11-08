@@ -220,7 +220,7 @@ def p_assert_action(p):
 
 def p_assignment_action(p):
     r'assignment_action : location assigning_operator expression'
-    p[0] = ('ASSIGNMENT_ACTION', [p[1], p[2], p[3]])
+    p[0] = (p[2][0], [p[1], p[3]])
 
 
 def p_assigning_operator(p):
@@ -229,14 +229,14 @@ def p_assigning_operator(p):
     if len(p) == 2:
         p[0] = ('ASSIGNING_OPERATOR', [])
     elif len(p) == 3:
-        p[0] = ('ASSIGNING_OPERATOR', [p[1]])
+        p[0] = p[1]
 
 
 def p_closed_dyadic_operator(p):
     r'''closed_dyadic_operator : arithmetic_additive_operator
                                 | arithmetic_multiplicative_operator
                                 | string_concatenation_operator'''
-    p[0] = ('CLOSED_DYADIC_OPERATOR', [p[1]])
+    p[0] = ('CLOSED_DYADIC_ASSIGNING_OPERATOR', [p[1]])
 
 
 def p_if_action(p):
@@ -646,7 +646,7 @@ def p_location(p):
                     | composite_element
                     | composite_slice
                     | procedure_call'''
-    p[0] = ('LOCATION', [p[1]])
+    p[0] = p[1]
 
 
 def p_location_name(p):

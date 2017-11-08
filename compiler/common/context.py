@@ -23,6 +23,9 @@ class Mode:
             return self.__dict__ == other.__dict__
         return NotImplemented
 
+    def __hash__(self):
+        return hash((self.name, self.is_struct, self.fields, self.size_in_bytes))
+
 
 class Type:
 
@@ -37,6 +40,9 @@ class Type:
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+    def __hash__(self):
+        return hash((self.mode.__hash__(), self.is_reference, self.is_array, self.array_size))
 
 
 class Field:
@@ -54,12 +60,15 @@ class Field:
             return self.__dict__ == other.__dict__
         return NotImplemented
 
+    def __hash__(self):
+        return hash((self.name, self.type.__hash__()))
+
 
 class Symbol:
     """
     A variable in Lya.
 
-    A symbol is defined as a name associated with a type. A symbol can define a location (pointer) and/or an array.
+    A symbol is defined as a name associated with a type.
     """
 
     def __init__(self, name, symbol_type):
@@ -72,6 +81,9 @@ class Symbol:
             return self.__dict__ == other.__dict__
         return NotImplemented
 
+    def __hash__(self):
+        return hash((self.name, self.type.__hash__()))
+
 
 class Definition:
     """
@@ -80,15 +92,18 @@ class Definition:
     This class is used to track the register of the last definition of a variable.
     """
 
-    def __init__(self, symbol, register_id):
-        self.symbol = symbol
-        self.register_id = register_id
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+    def __hash__(self):
+        return hash((self.name.__hash__(), self.value.__hash__()))
 
 
 class Constant:
@@ -107,6 +122,9 @@ class Constant:
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+    def __hash__(self):
+        return hash((self.symbol.__hash__(), self.value))
 
 
 class Procedure:
@@ -128,6 +146,9 @@ class Procedure:
             return self.__dict__ == other.__dict__
         return NotImplemented
 
+    def __hash__(self):
+        return hash((self.name, self.parameters, self.return_type))
+
 
 class Alias:
     """
@@ -146,6 +167,9 @@ class Alias:
             return self.__dict__ == other.__dict__
         return NotImplemented
 
+    def __hash__(self):
+        return hash((self.name, self.mode.__hash__()))
+
 
 class Label:
 
@@ -158,6 +182,9 @@ class Label:
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+    def __hash__(self):
+        return hash((self.name, self.position))
 
 
 class Scope:
@@ -203,12 +230,11 @@ class LyaContext:
         self.procedures = dict()
         self.aliases = dict()
         self.labels = dict()
+        self.definitions = dict()
 
         self.root_scope = Scope("root")
         self.scopes[self.root_scope.name] = self.root_scope
         self.current_scope = self.root_scope
-
-        self.__next_register__ = 0
 
         self.register_mode(INT_MODE)
         self.register_mode(BOOL_MODE)
@@ -279,9 +305,14 @@ class LyaContext:
 
         return self.procedures[procedure_name]
 
-    def next_register(self):
-        self.__next_register__ += 1
-        return self.__next_register__
+    def register_definition(self, definition):
+        self.definitions[definition.name] = definition
+
+    def find_definition(self, name):
+        if name not in self.definitions:
+            return None
+
+        return self.definitions[name]
 
 
 class ScopeNotRegisteredException(Exception):
