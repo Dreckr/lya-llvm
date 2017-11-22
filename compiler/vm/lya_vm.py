@@ -1,8 +1,9 @@
-from ctypes import CFUNCTYPE, c_void_p, c_int32
+from ctypes import CFUNCTYPE, c_int32
 
 import llvmlite.binding as llvm
 
 from compiler.codegen.llvm_codegen_visitor import LLVMCodeGenVisitor
+from compiler.semantic.symbol_declaration_visitor import SymbolDefinitionVisitor
 from compiler.common.context import LyaContext
 from compiler.syntatic.parser import parser
 from compiler.main import print_visit
@@ -12,6 +13,7 @@ class LyaVM:
 
     def __init__(self):
         self.context = LyaContext()
+        self.symbol_definition_visitor = SymbolDefinitionVisitor(self.context)
         self.llvm_codegen_visitor = LLVMCodeGenVisitor(self.context)
 
         # All these initializations are required for code generation!
@@ -19,12 +21,15 @@ class LyaVM:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()  # yes, even this one
 
+        llvm.load_library_permanently("liblya.so")
+
     def execute(self, lya_program):
         lya_ast = parser.parse(lya_program)
         print_visit(lya_ast)
 
         print()
 
+        self.symbol_definition_visitor.visit(lya_ast)
         module = self.llvm_codegen_visitor.visit_program(lya_ast)
 
         # Print the module IR
@@ -71,11 +76,20 @@ class LyaVM:
 
 test_program = """
     dcl a int = 10, b int = 12 + 2;
-    dcl c int = 3 + 1, e bool = 10 == b, f bool = e == false;
-    dcl foo chars[100] = "Olá, Mundo!";
+    dcl c int = 3 + 1, e bool = 10 == b, f bool = e == true;
     
     a = a + c + b;
     b = a + 4;
+    
+    print(f);
+    
+    if b > 10 then 
+        print(b);
+        
+        if b > 30 then
+            print(b + 10);
+        fi;
+    fi;
 """
 
 lyaVM = LyaVM()
