@@ -86,10 +86,17 @@ test_program = """
     if b > 10 then 
         print(b);
         
+        b = b - 20;
+        
         if b > 30 then
             print(b + 10);
         fi;
     fi;
+    
+    do while b > 0;
+        print(b);
+        b = b - 1;
+    od;
 """
 
 lyaVM = LyaVM()
