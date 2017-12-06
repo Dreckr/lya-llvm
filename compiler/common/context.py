@@ -29,6 +29,14 @@ class Mode:
         return hash((self.name, self.is_struct, self.fields, self.size_in_bytes))
 
 
+VOID_MODE = Mode("void", ir.VoidType())
+INT_MODE = Mode("int", ir.IntType(32))
+BOOL_MODE = Mode("bool", ir.IntType(1))
+CHAR_MODE = Mode("char", ir.IntType(8))
+EMPTY_MODE = Mode("null", ir.VoidType)
+STRING_MODE = Mode("string", ir.PointerType(ir.IntType(8)))
+
+
 class Type:
 
     def __init__(self, mode, is_reference=False, is_array=False, array_size=None):
@@ -146,7 +154,7 @@ class Procedure:
     Parameters are defined as symbols inside the scope of the procedure.
     """
 
-    def __init__(self, name, parameters=list(), return_type=None):
+    def __init__(self, name, parameters=list(), return_type=VOID_MODE):
         self.name = name
         self.parameters = parameters
         self.return_type = return_type
@@ -225,13 +233,6 @@ class Scope:
         return NotImplemented
 
 
-INT_MODE = Mode("int", ir.IntType(32))
-BOOL_MODE = Mode("bool", ir.IntType(1))
-CHAR_MODE = Mode("char", ir.IntType(8))
-EMPTY_MODE = Mode("null", ir.VoidType)
-STRING_MODE = Mode("string", ir.PointerType(ir.IntType(8)))
-
-
 class LyaContext:
 
     def __init__(self):
@@ -253,6 +254,7 @@ class LyaContext:
         self.register_mode(CHAR_MODE)
         # self.register_mode(STRING_MODE)
         self.register_mode(EMPTY_MODE)
+        self.register_mode(VOID_MODE)
 
     def register_scope(self, scope):
         self.scopes[scope.name] = scope

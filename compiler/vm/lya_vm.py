@@ -86,8 +86,20 @@ test_program = """
     
     print(f);
     
+    foo: proc(a int, b int);
+        if a > b then
+            print(a);
+        else
+            print(b);
+            
+            foo(a + 1, b);
+        fi;
+    end;
+    
+    foo(a, b);
+    
     if b > 10 then 
-        print(b);
+        foo(a + b, b);
         
         b = b - 20;
         
@@ -97,7 +109,7 @@ test_program = """
     fi;
     
     do while b > 0;
-        print(b);
+        foo(a + b, b * 2);
         b = b - 1;
     od;
 """

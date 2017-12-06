@@ -1,5 +1,6 @@
 from compiler.common.context import LyaContext, Definition, Type, INT_MODE, BOOL_MODE
 from compiler.common.visitor import Visitor
+from compiler.semantic.declaration_type_extraction_visitor import DeclarationTypeExtractionVisitor
 from compiler.semantic.expression_type_extraction_visitor import ExpressionTypeExtractionVisitor
 
 from llvmlite import ir
@@ -15,7 +16,10 @@ class LLVMCodeGenVisitor(Visitor):
 
     def __init__(self, context=LyaContext()):
         self.context = context
+        self.declaration_type_extractor = DeclarationTypeExtractionVisitor(self.context)
         self.expression_type_extractor = ExpressionTypeExtractionVisitor(self.context)
+
+        self.function_returned = False
 
         self.module = ir.Module(name=__file__)
         self.main = ir.Function(self.module, main_function_type, name="main")
@@ -36,6 +40,44 @@ class LLVMCodeGenVisitor(Visitor):
         self.builder.ret(i32(0))
 
         return self.module
+
+    # Procedure
+    def visit_procedure_statement(self, node):
+        procedure_name = node[1][0][2]
+
+        procedure = self.context.find_procedure(procedure_name)
+        return_type = procedure.return_type.to_llvm()
+        parameters = list(map(lambda parameter: parameter.type.to_llvm(), procedure.parameters))
+
+        function_type = ir.FunctionType(return_type, parameters)
+
+        func = ir.Function(self.module, function_type, name=procedure_name)
+
+        bb_entry = func.append_basic_block('entry')
+
+        current_builder = self.builder
+
+        self.builder = ir.IRBuilder(bb_entry)
+
+        for idx, parameter in enumerate(procedure.parameters):
+            ptr = self.builder.alloca(parameter.type.to_llvm(), 1, parameter.name)
+            self.context.register_definition(Definition(parameter.name, ptr))
+
+            self.builder.store(func.args[idx], ptr)
+
+        self.function_returned = False
+
+        if len(node[1][1][1]) == 3:
+            self.visit(node[1][1][1][2])
+        else:
+            self.visit(node[1][1][1][1])
+
+        if self.function_returned is False:
+            self.builder.ret_void()
+
+        self.builder = current_builder
+
+        return func
 
     # Literals
     def visit_integer_literal(self, node):
@@ -285,6 +327,22 @@ class LLVMCodeGenVisitor(Visitor):
             self.visit(while_node)
         else:
             raise NotImplementedError()
+
+    def visit_procedure_call(self, node):
+        r'''procedure_call : procedure_name LPARENS RPARENS
+                                | procedure_name LPARENS parameter_list RPARENS'''
+
+        procedure_name = node[1][0][2]
+
+        func = self.module.globals.get(procedure_name, None)
+
+        args = []
+        if len(node[1]) == 2:
+            arg_nodes = node[1][1][1]
+
+            args = [self.visit(arg_node) for arg_node in arg_nodes]
+
+        self.builder.call(func, args, 'call_{}'.format(procedure_name))
 
     def visit_print(self, node):
         parameters = node[1][0]

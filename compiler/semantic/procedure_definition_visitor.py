@@ -1,5 +1,5 @@
 from .declaration_type_extraction_visitor import DeclarationTypeExtractionVisitor
-from ..common.context import LyaContext, Symbol, Scope, Procedure
+from ..common.context import VOID_MODE, LyaContext, Symbol, Scope, Procedure, Type
 from ..common.visitor import Visitor
 
 
@@ -30,7 +30,7 @@ class ProcedureDefinitionVisitor(Visitor):
                 self.context.register_symbol(parameter)
                 parameters.append(parameter)
 
-        return_type = None
+        return_type = Type(VOID_MODE)
         if len(procedure_definition[1]) == 3:
             result_spec = procedure_definition[1][1]
 
