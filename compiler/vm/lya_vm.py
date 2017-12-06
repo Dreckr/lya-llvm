@@ -86,26 +86,28 @@ test_program = """
     
     print(f);
     
-    foo: proc(a int, b int);
-        if a > b then
-            print(a);
-        else
-            print(b);
-            
-            foo(a + 1, b);
-        fi;
+    foo: proc(a int, b int) returns (int);
+        return a + b;
     end;
     
-    foo(a, b);
+    bar: proc(a int loc, b int) returns (int);
+        a = 10;
+        return a + b;
+    end;
+    
+    bar(a, 12);
+    
+    print(a);
+    print(b);
+    
+    a = foo(a, b);
+    
+    print(a);
     
     if b > 10 then 
         foo(a + b, b);
         
         b = b - 20;
-        
-        if b > 30 then
-            print(b + 10);
-        fi;
     fi;
     
     do while b > 0;

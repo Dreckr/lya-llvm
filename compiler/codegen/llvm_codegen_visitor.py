@@ -342,7 +342,13 @@ class LLVMCodeGenVisitor(Visitor):
 
             args = [self.visit(arg_node) for arg_node in arg_nodes]
 
-        self.builder.call(func, args, 'call_{}'.format(procedure_name))
+        return self.builder.call(func, args, 'call_{}'.format(procedure_name))
+
+    def visit_return_action(self, node):
+        self.function_returned = True
+
+        if len(node[1]) > 0:
+            self.builder.ret(self.visit(node[1][0]))
 
     def visit_print(self, node):
         parameters = node[1][0]
