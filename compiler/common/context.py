@@ -2,6 +2,7 @@
 # Symbol - Variable
 # Mode - Type
 # Procedure - Function
+from llvmlite import ir
 
 
 class Mode:
@@ -11,8 +12,9 @@ class Mode:
     A mode can be one of the native types (bool, char, int) or it can be a struct composed of several fields.
     """
 
-    def __init__(self, name, is_struct=False, fields=None, size_in_bytes=1):
+    def __init__(self, name, llvm_type, is_struct=False, fields=None, size_in_bytes=1):
         self.name = name
+        self.llvm_type = llvm_type
         self.is_struct = is_struct
         self.fields = fields
         self.size_in_bytes = size_in_bytes
@@ -34,6 +36,15 @@ class Type:
         self.is_reference = is_reference
         self.is_array = is_array
         self.array_size = array_size
+
+    def to_llvm(self):
+        if self.is_array:
+            return ir.ArrayType(self.mode.llvm_type, self.array_size)
+
+        if self.is_reference:
+            return ir.PointerType(self.mode.llvm_type)
+
+        return self.mode.llvm_type
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
@@ -213,11 +224,12 @@ class Scope:
             return self.__dict__ == other.__dict__
         return NotImplemented
 
-INT_MODE = Mode("int")
-BOOL_MODE = Mode("bool")
-CHAR_MODE = Mode("char")
-EMPTY_MODE = Mode("null")
-STRING_MODE = Mode("string")
+
+INT_MODE = Mode("int", ir.IntType(32))
+BOOL_MODE = Mode("bool", ir.IntType(1))
+CHAR_MODE = Mode("char", ir.IntType(8))
+EMPTY_MODE = Mode("null", ir.VoidType)
+STRING_MODE = Mode("string", ir.PointerType(ir.IntType(8)))
 
 
 class LyaContext:
@@ -239,7 +251,7 @@ class LyaContext:
         self.register_mode(INT_MODE)
         self.register_mode(BOOL_MODE)
         self.register_mode(CHAR_MODE)
-        self.register_mode(STRING_MODE)
+        # self.register_mode(STRING_MODE)
         self.register_mode(EMPTY_MODE)
 
     def register_scope(self, scope):

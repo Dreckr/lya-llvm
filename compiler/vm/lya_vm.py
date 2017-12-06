@@ -3,6 +3,7 @@ from ctypes import CFUNCTYPE, c_int32
 import llvmlite.binding as llvm
 
 from compiler.codegen.llvm_codegen_visitor import LLVMCodeGenVisitor
+from compiler.semantic.procedure_definition_visitor import ProcedureDefinitionVisitor
 from compiler.semantic.symbol_declaration_visitor import SymbolDefinitionVisitor
 from compiler.common.context import LyaContext
 from compiler.syntatic.parser import parser
@@ -13,6 +14,7 @@ class LyaVM:
 
     def __init__(self):
         self.context = LyaContext()
+        self.procedure_definition_visitor = ProcedureDefinitionVisitor(self.context)
         self.symbol_definition_visitor = SymbolDefinitionVisitor(self.context)
         self.llvm_codegen_visitor = LLVMCodeGenVisitor(self.context)
 
@@ -29,6 +31,7 @@ class LyaVM:
 
         print()
 
+        self.procedure_definition_visitor.visit(lya_ast)
         self.symbol_definition_visitor.visit(lya_ast)
         module = self.llvm_codegen_visitor.visit_program(lya_ast)
 

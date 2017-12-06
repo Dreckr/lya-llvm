@@ -243,9 +243,9 @@ def p_if_action(p):
     r'''if_action : IF boolean_expression then_clause FI
                     | IF boolean_expression then_clause else_clause FI'''
     if len(p) == 5:
-        p[0] = ('IF_ACTION', [p[2], p[3]])
+        p[0] = ('IF', [p[2], p[3]])
     elif len(p) == 6:
-        p[0] = ('IF_ACTION', [p[2], p[3], p[4]])
+        p[0] = ('IF', [p[2], p[3], p[4]])
 
 
 def p_then_clause(p):
@@ -260,35 +260,35 @@ def p_else_clause(p):
     if len(p) == 3:
         p[0] = ('ELSE_CLAUSE', [p[2]])
     elif len(p) == 4:
-        p[0] = ('ELSE_CLAUSE', [p[2], p[3]])
+        p[0] = ('ELSE_CLAUSE', [('IF_ACTION', [p[2], p[3]])])
     elif len(p) == 5:
-        p[0] = ('ELSE_CLAUSE', [p[2], p[3], p[4]])
+        p[0] = ('ELSE_CLAUSE', [('IF_ACTION', [p[2], p[3], p[5]])])
 
 
 def p_do_action(p):
     r'''do_action : DO action_statement_list OD
                     | DO control_part SEMICOLON action_statement_list OD'''
     if len(p) == 4:
-        p[0] = ('DO_ACTION', [p[2]])
+        p[0] = p[2]
     elif len(p) == 6:
-        p[0] = ('DO_ACTION', [p[2], p[4]])
+        p[0] = (p[2][0], [p[2][1][0], p[4]])
 
 
 def p_control_part(p):
     r'''control_part : for_control
                         | while_control'''
-    p[0] = ('CONTROL_PART', [p[1]])
+    p[0] = p[1]
 
 
 def p_for_control(p):
     r'for_control : FOR iteration'
-    p[0] = ('FOR_CONTROL', [p[2]])
+    p[0] = ('FOR', [p[2]])
 
 
 def p_iteration(p):
     r'''iteration : step_enumeration
                     | range_enumeration'''
-    p[0] = ('ITERATION', [p[1]])
+    p[0] = p[1]
 
 
 def p_step_enumeration(p):
@@ -299,9 +299,9 @@ def p_step_enumeration(p):
     if len(p) == 5:
         p[0] = ('STEP_ENUMERATION', [p[1], p[3], p[4]])
     elif len(p) == 6 and p[3].type == 'step_value':
-        p[0] = ('STEP_ENUMERATION', [p[1], p[3], p[4]])
+        p[0] = ('STEP_ENUMERATION', [p[1], p[3], p[4], p[5]])
     elif len(p) == 6 and p[3].type == 'DOWN':
-        p[0] = ('STEP_ENUMERATION_DOWN', [p[1], p[4]])
+        p[0] = ('STEP_ENUMERATION_DOWN', [p[1], p[3], p[5]])
     elif len(p) == 7:
         p[0] = ('STEP_ENUMERATION_DOWN', [p[1], p[3], p[4], p[6]])
 
@@ -347,7 +347,7 @@ def p_range_definition(p):
 
 def p_while_control(p):
     r'while_control : WHILE boolean_expression'
-    p[0] = ('WHILE_CONTROL', [p[2]])
+    p[0] = ('WHILE', [p[2]])
 
 
 def p_call_action(p):
@@ -384,9 +384,9 @@ def p_builtin_call(p):
     r'''builtin_call : builtin_name LPARENS RPARENS
                         | builtin_name LPARENS parameter_list RPARENS '''
     if len(p) == 4:
-        p[0] = ('BUILTIN_CALL', [p[1]])
+        p[0] = (p[1][0], [])
     elif len(p) == 5:
-        p[0] = ('BUILTIN_CALL', [p[1], p[3]])
+        p[0] = (p[1][0], [p[3]])
 
 
 def p_builtin_name(p):
@@ -400,7 +400,7 @@ def p_builtin_name(p):
                         | PRINT
                         | NEW
                         | FREE'''
-    p[0] = ('BUILTIN_NAME', [], p[1])
+    p[0] = (p[1].upper(), [])
 
 
 # Mode

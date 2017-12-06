@@ -1,5 +1,6 @@
-from compiler.common.context import LyaContext, Definition
+from compiler.common.context import LyaContext, Definition, Type, INT_MODE, BOOL_MODE
 from compiler.common.visitor import Visitor
+from compiler.semantic.expression_type_extraction_visitor import ExpressionTypeExtractionVisitor
 
 from llvmlite import ir
 
@@ -14,9 +15,13 @@ class LLVMCodeGenVisitor(Visitor):
 
     def __init__(self, context=LyaContext()):
         self.context = context
+        self.expression_type_extractor = ExpressionTypeExtractionVisitor(self.context)
 
         self.module = ir.Module(name=__file__)
         self.main = ir.Function(self.module, main_function_type, name="main")
+
+        self.print_int_function = ir.Function(self.module, ir.FunctionType(void, [i32]), name='print_int')
+        self.print_bool_function = ir.Function(self.module, ir.FunctionType(void, [b]), name='print_bool')
 
         block = self.main.append_basic_block(name="entry")
 
@@ -25,11 +30,10 @@ class LLVMCodeGenVisitor(Visitor):
     def visit_program(self, node):
         self.visit_children(node)
 
-        a = i32(10)
-        b = i32(12)
+        ptr = self.builder.alloca(i32, 1, 'test_ptr')
+        self.builder.store(i32(10), ptr)
 
-        result = self.builder.add(a, b, name="res")
-        self.builder.ret(result)
+        self.builder.ret(i32(0))
 
         return self.module
 
@@ -57,13 +61,27 @@ class LLVMCodeGenVisitor(Visitor):
     def visit_declaration(self, node):
         identifiers = node[1][0][1]
 
+        for identifier in identifiers:
+            symbol = self.context.find_symbol(identifier[2])
+
+            if symbol is None:
+                raise "Symbol {} not defined".format(identifier[2])
+
+            ptr = self.builder.alloca(symbol.type.to_llvm(), 1, identifier[2])
+            self.context.register_definition(Definition(identifier[2], ptr))
+
         if len(node[1]) >= 3:
             initialization_node = node[1][2]
 
             initialization_value = self.visit(initialization_node)
 
             for identifier in identifiers:
-                self.context.register_definition(Definition(identifier[2], initialization_value))
+                definition = self.context.find_definition(identifier[2])
+
+                if definition is None:
+                    raise "Definition {} not found".format(identifier[2])
+
+                self.builder.store(initialization_value, definition.value)
 
         return None
 
@@ -74,7 +92,7 @@ class LLVMCodeGenVisitor(Visitor):
         location_definition = self.context.find_definition(location_name)
 
         if location_definition is not None:
-            return location_definition.value
+            return self.builder.load(location_definition.value)
 
         return None
 
@@ -85,7 +103,12 @@ class LLVMCodeGenVisitor(Visitor):
 
         expression_value = self.visit(expression_node)
 
-        self.context.register_definition(Definition(identifier, expression_value))
+        definition = self.context.find_definition(identifier)
+
+        if definition is None:
+            raise "Definition {} not found".format(identifier)
+
+        self.builder.store(expression_value, definition.value)
 
         return None
 
@@ -159,3 +182,118 @@ class LLVMCodeGenVisitor(Visitor):
         return self.visit_comparison_operator(node, ">=")
 
     # Control flow
+    def visit_if(self, node):
+        condition_node = node[1][0]
+        then_node = node[1][1]
+
+        condition_value = self.visit(condition_node)
+
+        comparison = self.builder.icmp_signed('!=', condition_value, b(0))
+
+        then_bb = self.builder.function.append_basic_block('then')
+        else_bb = ir.Block(self.builder.function, 'else')
+        fi_bb = ir.Block(self.builder.function, 'fi')
+
+        if len(node[1]) == 3:
+            self.builder.cbranch(comparison, then_bb, else_bb)
+
+            self.builder.position_at_start(then_bb)
+
+            self.visit(then_node)
+
+            self.builder.branch(fi_bb)
+
+            else_node = node[1][2]
+
+            self.builder.function.basic_blocks.append(else_bb)
+            self.builder.position_at_start(else_bb)
+
+            self.visit(else_node)
+
+            self.builder.branch(fi_bb)
+        else:
+            self.builder.cbranch(comparison, then_bb, fi_bb)
+
+            self.builder.position_at_start(then_bb)
+
+            self.visit(then_node)
+
+            self.builder.branch(fi_bb)
+
+        self.builder.function.basic_blocks.append(fi_bb)
+        self.builder.position_at_start(fi_bb)
+
+    def visit_while(self, node):
+        condition_node = node[1][0]
+        then_node = node[1][1]
+
+        do_bb = self.builder.function.append_basic_block('do_while')
+        od_bb = ir.Block(self.builder.function, 'od')
+        then_bb = ir.Block(self.builder.function, 'then')
+
+        self.builder.branch(do_bb)
+        self.builder.position_at_start(do_bb)
+
+        condition_value = self.visit(condition_node)
+
+        comparison = self.builder.icmp_signed('!=', condition_value, b(0))
+
+        self.builder.cbranch(comparison, then_bb, od_bb)
+
+        self.builder.function.basic_blocks.append(then_bb)
+        self.builder.position_at_start(then_bb)
+
+        self.visit(then_node)
+
+        self.builder.branch(do_bb)
+
+        self.builder.function.basic_blocks.append(od_bb)
+        self.builder.position_at_start(od_bb)
+
+    def visit_for(self, node):
+        iteration_node = node[1][0]
+        then_node = node[1][1]
+
+        if iteration_node[0] == 'STEP_ENUMERATION' or\
+                iteration_node[0] == 'STEP_ENUMERATION_DOWN':
+            loop_counter = iteration_node[1][0][2]
+            start_value_node = iteration_node[1][1]
+            end_value_node = iteration_node[1][2] if len(iteration_node[1]) == 3 else iteration_node[1][3]
+            step_value_node = iteration_node[1][2] if len(iteration_node[1]) == 4 else ('INTEGER_LITERAL', [], 1)
+
+            if iteration_node[0] == 'STEP_ENUMERATION_DOWN':
+                step_value_node = ('MINUS_OPERATOR', [step_value_node])
+
+            loop_declaration_node = \
+                ('DECLARATION',
+                 [('IDENTIFIER_LIST', [('IDENTIFIER', [], loop_counter)]), ('DISCRETE_MODE', [], 'INT'),
+                 start_value_node])
+
+            condition_node = ('NEQ_OPERATOR', [('LOCATION_NAME', [], loop_counter), end_value_node])
+
+            step_node = \
+                ('ASSIGNING_OPERATOR',
+                 [('LOCATION_NAME', [], loop_counter),
+                  ('PLUS_OPERATOR', [('LOCATION_NAME', [], loop_counter), step_value_node])])
+
+            then_node[1].append(step_node)
+
+            while_node = ('WHILE', [condition_node, then_node])
+
+            self.visit(loop_declaration_node)
+
+            self.visit(while_node)
+        else:
+            raise NotImplementedError()
+
+    def visit_print(self, node):
+        parameters = node[1][0]
+
+        for parameter in parameters[1]:
+            parameter_type = self.expression_type_extractor.visit(parameter)
+            parameter_value = self.visit(parameter)
+
+            if parameter_type == Type(INT_MODE):
+                self.builder.call(self.print_int_function, [parameter_value])
+            elif parameter_type == Type(BOOL_MODE):
+                self.builder.call(self.print_bool_function, [parameter_value])
