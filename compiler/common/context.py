@@ -154,8 +154,9 @@ class Procedure:
     Parameters are defined as symbols inside the scope of the procedure.
     """
 
-    def __init__(self, name, parameters=list(), return_type=VOID_MODE):
+    def __init__(self, name, scope, parameters=list(), return_type=VOID_MODE):
         self.name = name
+        self.scope = scope
         self.parameters = parameters
         self.return_type = return_type
 
@@ -166,7 +167,7 @@ class Procedure:
         return NotImplemented
 
     def __hash__(self):
-        return hash((self.name, self.parameters, self.return_type))
+        return hash((self.name, self.scope, self.parameters, self.return_type))
 
 
 class Alias:
@@ -243,7 +244,6 @@ class LyaContext:
         self.procedures = dict()
         self.aliases = dict()
         self.labels = dict()
-        self.definitions = dict()
 
         self.root_scope = Scope("root")
         self.scopes[self.root_scope.name] = self.root_scope
@@ -320,13 +320,10 @@ class LyaContext:
         return self.procedures[procedure_name]
 
     def register_definition(self, definition):
-        self.definitions[definition.name] = definition
+        self.current_scope.definitions[definition.name] = definition
 
     def find_definition(self, name):
-        if name not in self.definitions:
-            return None
-
-        return self.definitions[name]
+        return self.current_scope.find_definition(name)
 
 
 class ScopeNotRegisteredException(Exception):

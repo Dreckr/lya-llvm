@@ -39,6 +39,13 @@ class DeclarationTypeExtractionVisitor(Visitor):
 
         return Type(mode_type.mode, is_reference=True)
 
+    def visit_parameter_spec_loc(self, node):
+        mode_node = node[1][0]
+
+        mode_type = self.visit(mode_node)
+
+        return Type(mode_type.mode, is_reference=True)
+
     # TODO
     def visit_composite_mode(self, node):
         pass

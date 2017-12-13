@@ -55,6 +55,16 @@ class ExpressionTypeExtractionVisitor(Visitor):
     def visit_modulo_operator(self, node):
         return self.visit_arithmetic_operator(node)
 
+    def visit_monadic_minus_operator(self, node):
+        value = node[1][0]
+
+        value_mode = self.visit(value)
+
+        if value_mode != Type(INT_MODE):
+            raise Exception("{} should be of mode 'int' on operation {}".format(value, node))
+
+        return Type(INT_MODE)
+
     # Relational Operators
     def visit_bool_relational_operator(self, node):
         a = node[1][0]
@@ -77,7 +87,7 @@ class ExpressionTypeExtractionVisitor(Visitor):
     def visit_or_operator(self, node):
         return self.visit_bool_relational_operator(node)
 
-    def visit_not_operator(self, node):
+    def visit_monadic_not_operator(self, node):
         value = node[1][0]
 
         value_mode = self.visit(value)

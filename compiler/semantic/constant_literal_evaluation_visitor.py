@@ -57,6 +57,16 @@ class ConstantLiteralEvaluationVisitor(Visitor):
     def visit_modulo_operator(self, node):
         return self.visit_arithmetic_operator(node, operator.mod)
 
+    def visit_monadic_minus_operator(self, node):
+        value_node = node[1][0]
+
+        value = self.visit(value_node)
+
+        if not isinstance(value, int):
+            raise Exception("{} should be of mode 'int' on operation {}".format(value, node))
+
+        return -value
+
     # Relational Operators
     def visit_bool_relational_operator(self, node, relational_operator):
         a_node = node[1][0]
@@ -79,7 +89,7 @@ class ConstantLiteralEvaluationVisitor(Visitor):
     def visit_or_operator(self, node):
         return self.visit_bool_relational_operator(node, operator.or_)
 
-    def visit_not_operator(self, node):
+    def visit_monadic_not_operator(self, node):
         value_node = node[1][0]
 
         value = self.visit(value_node)

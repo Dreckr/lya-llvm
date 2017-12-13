@@ -1,4 +1,4 @@
-from compiler.common.context import LyaContext, Definition, Type, INT_MODE, BOOL_MODE
+from compiler.common.context import LyaContext, Definition, Type, INT_MODE, BOOL_MODE, CHAR_MODE, STRING_MODE
 from compiler.common.visitor import Visitor
 from compiler.semantic.declaration_type_extraction_visitor import DeclarationTypeExtractionVisitor
 from compiler.semantic.expression_type_extraction_visitor import ExpressionTypeExtractionVisitor
@@ -16,9 +16,11 @@ class LLVMCodeGenVisitor(Visitor):
 
     def __init__(self, context=LyaContext()):
         self.context = context
+
         self.declaration_type_extractor = DeclarationTypeExtractionVisitor(self.context)
         self.expression_type_extractor = ExpressionTypeExtractionVisitor(self.context)
 
+        self.str_constant_count = 0
         self.function_returned = False
 
         self.module = ir.Module(name=__file__)
@@ -26,6 +28,15 @@ class LLVMCodeGenVisitor(Visitor):
 
         self.print_int_function = ir.Function(self.module, ir.FunctionType(void, [i32]), name='print_int')
         self.print_bool_function = ir.Function(self.module, ir.FunctionType(void, [b]), name='print_bool')
+        self.print_char_function = ir.Function(self.module, ir.FunctionType(void, [char]), name='print_char')
+        self.print_str_function = ir.Function(self.module, ir.FunctionType(void, [char.as_pointer()]), name='print_str')
+        self.println_function = ir.Function(self.module, ir.FunctionType(void, []), name='println')
+
+        self.read_int_function = ir.Function(self.module, ir.FunctionType(void, [i32.as_pointer()]), name='read_int')
+        self.read_char_function = ir.Function(self.module, ir.FunctionType(void, [char.as_pointer()]), name='read_char')
+        self.read_bool_function = ir.Function(self.module, ir.FunctionType(void, [b.as_pointer()]), name='read_bool')
+        self.read_str_function =\
+            ir.Function(self.module, ir.FunctionType(void, [char.as_pointer().as_pointer()]), name='read_str')
 
         block = self.main.append_basic_block(name="entry")
 
@@ -59,11 +70,18 @@ class LLVMCodeGenVisitor(Visitor):
 
         self.builder = ir.IRBuilder(bb_entry)
 
-        for idx, parameter in enumerate(procedure.parameters):
-            ptr = self.builder.alloca(parameter.type.to_llvm(), 1, parameter.name)
-            self.context.register_definition(Definition(parameter.name, ptr))
+        self.context.enter_scope(procedure.scope.name)
 
-            self.builder.store(func.args[idx], ptr)
+        for idx, parameter in enumerate(procedure.parameters):
+            if parameter.type.is_reference:
+                ptr = func.args[idx]
+                self.context.register_definition(Definition(parameter.name, ptr))
+                continue
+            else:
+                ptr = self.builder.alloca(parameter.type.to_llvm(), 1, parameter.name)
+                self.context.register_definition(Definition(parameter.name, ptr))
+
+                self.builder.store(func.args[idx], ptr)
 
         self.function_returned = False
 
@@ -74,6 +92,8 @@ class LLVMCodeGenVisitor(Visitor):
 
         if self.function_returned is False:
             self.builder.ret_void()
+
+        self.context.enter_scope(procedure.scope.parent.name)
 
         self.builder = current_builder
 
@@ -93,8 +113,15 @@ class LLVMCodeGenVisitor(Visitor):
         return node[2]
 
     def visit_character_string_literal(self, node):
-        string_type = ir.ArrayType(char, len(node[2]))
-        return string_type(node[2])
+        str_value = bytearray('{}\0'.format(node[2]), 'utf8')
+        string_type = ir.ArrayType(char, len(str_value))
+        value = ir.GlobalVariable(self.module, string_type, '.str{}'.format(self.str_constant_count))
+        value.linkage = 'internal'
+        value.initializer = string_type(str_value)
+
+        self.str_constant_count += 1
+
+        return value
 
     def visit_empty_literal(self, node):
         return None
@@ -148,7 +175,7 @@ class LLVMCodeGenVisitor(Visitor):
         definition = self.context.find_definition(identifier)
 
         if definition is None:
-            raise "Definition {} not found".format(identifier)
+            raise Exception("Definition {} not found".format(identifier))
 
         self.builder.store(expression_value, definition.value)
 
@@ -181,6 +208,13 @@ class LLVMCodeGenVisitor(Visitor):
     def visit_modulo_operator(self, node):
         return self.visit_binary_operator(node, self.builder.srem)
 
+    def visit_monadic_not_operator(self, node):
+        value_node = node[1][0]
+
+        value = self.visit(value_node)
+
+        return i32(-value)
+
     # Boolean operators
     def visit_and_operator(self, node):
         return self.visit_binary_operator(node, self.builder.and_)
@@ -188,7 +222,7 @@ class LLVMCodeGenVisitor(Visitor):
     def visit_or_operator(self, node):
         return self.visit_binary_operator(node, self.builder.or_)
 
-    def visit_not_operator(self, node):
+    def visit_monadic_not_operator(self, node):
         value_node = node[1][0]
 
         value = self.visit(value_node)
@@ -265,6 +299,8 @@ class LLVMCodeGenVisitor(Visitor):
         self.builder.function.basic_blocks.append(fi_bb)
         self.builder.position_at_start(fi_bb)
 
+        self.function_returned = False
+
     def visit_while(self, node):
         condition_node = node[1][0]
         then_node = node[1][1]
@@ -291,6 +327,8 @@ class LLVMCodeGenVisitor(Visitor):
 
         self.builder.function.basic_blocks.append(od_bb)
         self.builder.position_at_start(od_bb)
+
+        self.function_returned = False
 
     def visit_for(self, node):
         iteration_node = node[1][0]
@@ -334,13 +372,29 @@ class LLVMCodeGenVisitor(Visitor):
 
         procedure_name = node[1][0][2]
 
+        procedure = self.context.find_procedure(procedure_name)
         func = self.module.globals.get(procedure_name, None)
 
         args = []
         if len(node[1]) == 2:
             arg_nodes = node[1][1][1]
 
-            args = [self.visit(arg_node) for arg_node in arg_nodes]
+            args = []
+            for idx, arg_node in enumerate(arg_nodes):
+
+                if procedure.parameters[idx].type.is_reference:
+                    if arg_node[1][0][0] != 'LOCATION_NAME':
+                        raise 'Argument {} should be a reference for a location'.format(arg_node)
+
+                    location_node = arg_node[1][0]
+                    location_name = location_node[2]
+
+                    location_definition = self.context.find_definition(location_name)
+                    value = location_definition.value
+                else:
+                    value = self.visit(arg_node)
+
+                args.append(value)
 
         return self.builder.call(func, args, 'call_{}'.format(procedure_name))
 
@@ -349,15 +403,48 @@ class LLVMCodeGenVisitor(Visitor):
 
         if len(node[1]) > 0:
             self.builder.ret(self.visit(node[1][0]))
+        else:
+            self.builder.ret_void()
 
+    # Builtin Call
     def visit_print(self, node):
-        parameters = node[1][0]
+        arguments = node[1][0]
 
-        for parameter in parameters[1]:
-            parameter_type = self.expression_type_extractor.visit(parameter)
-            parameter_value = self.visit(parameter)
+        for argument in arguments[1]:
+            argument_type = self.expression_type_extractor.visit(argument)
+            argument_value = self.visit(argument)
 
-            if parameter_type == Type(INT_MODE):
-                self.builder.call(self.print_int_function, [parameter_value])
-            elif parameter_type == Type(BOOL_MODE):
-                self.builder.call(self.print_bool_function, [parameter_value])
+            if argument_type == Type(INT_MODE):
+                self.builder.call(self.print_int_function, [argument_value])
+            elif argument_type == Type(BOOL_MODE):
+                self.builder.call(self.print_bool_function, [argument_value])
+            elif argument_type == Type(CHAR_MODE):
+                self.builder.call(self.print_char_function, [argument_value])
+            elif argument_type == Type(STRING_MODE):
+                self.builder.call(self.print_str_function, [self.builder.gep(argument_value, [i32(0), i32(0)])])
+
+        self.builder.call(self.println_function, [])
+
+    def visit_read(self, node):
+        arguments = node[1][0]
+
+        for argument in arguments[1]:
+            argument_type = self.expression_type_extractor.visit(argument)
+
+            if argument[1][0][0] != 'LOCATION_NAME':
+                raise 'Argument {} should be a reference for a location'.format(argument)
+
+            location_node = argument[1][0]
+            location_name = location_node[2]
+
+            location_definition = self.context.find_definition(location_name)
+            argument_value = location_definition.value
+
+            if argument_type == Type(INT_MODE):
+                self.builder.call(self.read_int_function, [argument_value])
+            elif argument_type == Type(BOOL_MODE):
+                self.builder.call(self.read_bool_function, [argument_value])
+            elif argument_type == Type(CHAR_MODE):
+                self.builder.call(self.read_char_function, [argument_value])
+            elif argument_type == Type(STRING_MODE):
+                self.builder.call(self.read_str_function, [argument_value])

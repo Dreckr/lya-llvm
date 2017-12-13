@@ -77,43 +77,68 @@ class LyaVM:
         return mod
 
 
+# test_program = """
+#     dcl a int = 10, b int = 12 + 2;
+#     dcl c int = 3 + 1, e bool = 10 == b, f bool = e == true;
+#
+#     a = a + c + b;
+#     b = a + 4;
+#
+#     print(f);
+#
+#     foo: proc(a int, b int) returns (int);
+#         return a + b;
+#     end;
+#
+#     bar: proc(a int loc, b int) returns (int);
+#         a = b;
+#         return a + b;
+#     end;
+#
+#     bar(a, 12);
+#     print(a);
+#
+#     read(f);
+#     print(f);
+#
+#     print("Type a number:");
+#     read(b);
+#     print("The number you typed is ", b);
+#     print(b);
+#
+#     a = foo(a, b);
+#
+#     print(a);
+#
+#     if b > 10 then
+#         foo(a + b, b);
+#
+#         b = b - 20;
+#     fi;
+#
+#     do while b > 0;
+#         foo(a + b, b * 2);
+#         b = b - 1;
+#     od;
+# """
 test_program = """
-    dcl a int = 10, b int = 12 + 2;
-    dcl c int = 3 + 1, e bool = 10 == b, f bool = e == true;
-    
-    a = a + c + b;
-    b = a + 4;
-    
-    print(f);
-    
-    foo: proc(a int, b int) returns (int);
-        return a + b;
-    end;
-    
-    bar: proc(a int loc, b int) returns (int);
-        a = 10;
-        return a + b;
-    end;
-    
-    bar(a, 12);
-    
-    print(a);
-    print(b);
-    
-    a = foo(a, b);
-    
-    print(a);
-    
-    if b > 10 then 
-        foo(a + b, b);
-        
-        b = b - 20;
-    fi;
-    
-    do while b > 0;
-        foo(a + b, b * 2);
-        b = b - 1;
-    od;
+
+fibo: proc (n int) returns (int);
+  dcl r int;
+  if n == 0 then
+    r = 0;
+  elseif n <= 2 then
+    r = 1;
+  else
+    r = fibo(n-1) + fibo(n-2);
+  fi;
+  
+  return r;
+end;
+
+dcl n int;
+read(n);
+print(fibo(n));
 """
 
 lyaVM = LyaVM()

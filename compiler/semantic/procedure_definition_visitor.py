@@ -38,4 +38,4 @@ class ProcedureDefinitionVisitor(Visitor):
 
         self.context.enter_scope(procedure_scope.parent.name)
 
-        self.context.register_procedure(Procedure(procedure_name, parameters, return_type))
+        self.context.register_procedure(Procedure(procedure_name, procedure_scope, parameters, return_type))

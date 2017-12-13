@@ -126,8 +126,8 @@ def p_procedure_statement(p):
 
 
 def p_procedure_definition(p):
-    r'''procedure_definition : PROC LPARENS formal_parameter_list RPARENS SEMICOLON action_statement_list END
-                            | PROC LPARENS formal_parameter_list RPARENS result_spec SEMICOLON action_statement_list END'''
+    r'''procedure_definition : PROC LPARENS formal_parameter_list RPARENS SEMICOLON procedure_body_statement_list END
+                    | PROC LPARENS formal_parameter_list RPARENS result_spec SEMICOLON procedure_body_statement_list END'''
     if len(p) == 9:
         p[0] = ('PROCEDURE_DEFINITION', [p[3], p[5], p[7]])
     elif len(p) == 8:
@@ -169,6 +169,22 @@ def p_result_spec(p):
         p[0] = ('RESULT_SPEC', [p[3]])
     elif len(p) == 6:
         p[0] = ('RESULT_SPEC_LOC', [p[3]])
+
+
+def p_procedure_body_statement_list(p):
+    r'''procedure_body_statement_list : procedure_body_statement_list procedure_body_statement
+                                    | procedure_body_statement'''
+    if len(p) == 2:
+        p[0] = ('PROCEDURE_BODY_STATEMENT_LIST', [p[1]])
+    elif len(p) == 3:
+        p[1][1].append(p[2])
+        p[0] = ('PROCEDURE_BODY_STATEMENT_LIST', p[1][1])
+
+
+def p_procedure_body_statement(p):
+    r'''procedure_body_statement : declaration_statement
+                    | action_statement'''
+    p[0] = p[1]
 
 
 # Action
@@ -260,9 +276,9 @@ def p_else_clause(p):
     if len(p) == 3:
         p[0] = ('ELSE_CLAUSE', [p[2]])
     elif len(p) == 4:
-        p[0] = ('ELSE_CLAUSE', [('IF_ACTION', [p[2], p[3]])])
+        p[0] = ('ELSE_CLAUSE', [('IF', [p[2], p[3]])])
     elif len(p) == 5:
-        p[0] = ('ELSE_CLAUSE', [('IF_ACTION', [p[2], p[3], p[5]])])
+        p[0] = ('ELSE_CLAUSE', [('IF', [p[2], p[3], p[4]])])
 
 
 def p_do_action(p):
@@ -505,7 +521,7 @@ def p_expression_list(p):
 def p_expression(p):
     r'''expression : operand0
                         | conditional_expression'''
-    p[0] = ('EXPRESSION', [p[1]])
+    p[0] = p[1]
 
 
 def p_conditional_expression(p):
@@ -629,7 +645,7 @@ def p_operand3(p):
 def p_monadic_operator(p):
     r'''monadic_operator : MINUS
                             | NOT'''
-    p[0] = ('{}_OPERATOR'.format(p.slice[1].type), [])
+    p[0] = ('MONADIC_{}_OPERATOR'.format(p.slice[1].type), [])
 
 
 def p_operand4(p):
