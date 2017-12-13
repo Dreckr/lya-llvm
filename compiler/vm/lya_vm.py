@@ -122,23 +122,16 @@ class LyaVM:
 #     od;
 # """
 test_program = """
+/* example1: */
+dcl m,n,s int;
 
-fibo: proc (n int) returns (int);
-  dcl r int;
-  if n == 0 then
-    r = 0;
-  elseif n <= 2 then
-    r = 1;
-  else
-    r = fibo(n-1) + fibo(n-2);
-  fi;
-  
-  return r;
-end;
-
-dcl n int;
-read(n);
-print(fibo(n));
+read(m,n);
+s = 0;
+do while m <= n;
+  s += m * n;
+  print(m,s);
+  m += 1;
+od;
 """
 
 lyaVM = LyaVM()

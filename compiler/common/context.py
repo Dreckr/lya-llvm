@@ -252,7 +252,7 @@ class LyaContext:
         self.register_mode(INT_MODE)
         self.register_mode(BOOL_MODE)
         self.register_mode(CHAR_MODE)
-        # self.register_mode(STRING_MODE)
+        self.register_mode(STRING_MODE)
         self.register_mode(EMPTY_MODE)
         self.register_mode(VOID_MODE)
 
@@ -264,28 +264,28 @@ class LyaContext:
             raise ScopeNotRegisteredException()
 
         self.current_scope = self.scopes[scope_name]
-        
+
     def register_symbol(self, symbol):
         self.symbols[symbol.name] = symbol
-        
+
     def find_symbol(self, symbol_name):
         if symbol_name not in self.symbols:
             return None
 
         return self.symbols[symbol_name]
-        
+
     def register_mode(self, mode):
         self.modes[mode.name] = mode
-        
+
     def find_mode(self, mode_name):
         if mode_name not in self.modes:
             return None
 
         return self.modes[mode_name]
-        
+
     def register_constant(self, constant):
         self.constants[constant.symbol] = constant
-        
+
     def find_constant(self, symbol):
         if symbol not in self.constants:
             return None

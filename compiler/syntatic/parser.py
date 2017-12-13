@@ -236,7 +236,10 @@ def p_assert_action(p):
 
 def p_assignment_action(p):
     r'assignment_action : location assigning_operator expression'
-    p[0] = (p[2][0], [p[1], p[3]])
+    if p[2][0] == 'ASSIGNING_OPERATOR':
+        p[0] = (p[2][0], [p[1], p[3]])
+    else:
+        p[0] = ('ASSIGNING_OPERATOR', [p[1], (p[2][0], [p[1], p[3]])])
 
 
 def p_assigning_operator(p):
@@ -252,7 +255,7 @@ def p_closed_dyadic_operator(p):
     r'''closed_dyadic_operator : arithmetic_additive_operator
                                 | arithmetic_multiplicative_operator
                                 | string_concatenation_operator'''
-    p[0] = ('CLOSED_DYADIC_ASSIGNING_OPERATOR', [p[1]])
+    p[0] = p[1]
 
 
 def p_if_action(p):

@@ -12,6 +12,8 @@ void = ir.VoidType()
 main_function_type = ir.FunctionType(i32, ())
 
 
+# TODO
+# - Return with return variable
 class LLVMCodeGenVisitor(Visitor):
 
     def __init__(self, context=LyaContext()):
@@ -136,7 +138,12 @@ class LLVMCodeGenVisitor(Visitor):
             if symbol is None:
                 raise "Symbol {} not defined".format(identifier[2])
 
-            ptr = self.builder.alloca(symbol.type.to_llvm(), 1, identifier[2])
+            if self.context.current_scope.name == 'root':
+                ptr = ir.GlobalVariable(self.module, symbol.type.to_llvm(), identifier[2])
+                ptr.linkage = 'internal'
+            else:
+                ptr = self.builder.alloca(symbol.type.to_llvm(), 1, identifier[2])
+
             self.context.register_definition(Definition(identifier[2], ptr))
 
         if len(node[1]) >= 3:
