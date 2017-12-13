@@ -1,0 +1,191 @@
+\documentclass[11pt, oneside, titlepage]{report}
+
+  \usepackage{geometry}
+  \geometry{letterpaper}
+  \usepackage{amstext}
+  \usepackage{amsmath}
+  \usepackage{hyperref}
+
+  \usepackage{graphicx}
+
+  \usepackage{amssymb}
+
+  \usepackage[utf8]{inputenc}
+  \usepackage[portuges,brazilian]{babel}
+  \usepackage[T1]{fontenc}
+  \usepackage{titling}
+  \usepackage{titlesec, blindtext, color}
+
+  \renewcommand\maketitlehooka{\null\mbox{}\vfill}
+  \renewcommand\maketitlehookd{\vfill\null}
+
+  \newcommand{\hsp}{\hspace{20pt}}
+  \titleformat{\chapter}[hang]{\Huge\bfseries}{\thechapter\hsp{|}\hsp}{0pt}{\Huge\bfseries}
+
+  \makeatletter
+  \let\Hy@linktoc\Hy@linktoc@none
+  \makeatother
+
+  \title{%
+    MC032 - Estudo Dirigido \\
+    \large \textit{Representação Intermediária LLVM} \\
+    \small Guido Araujo
+  }
+
+  \author{
+    Diego Rocha \\
+     \texttt{RA 135494}
+  }
+
+  \begin{document}
+
+    \begin{titlepage}
+
+      \maketitle
+
+    \end{titlepage}
+
+    \tableofcontents
+
+    \chapter{Introdução}
+
+      O projeto LLVM foi iniciado em 2000 na Universidade de Illinois em Urbana-Champaign como um \textit{toolkit} de
+      infrasestrutura para compiladores e oferece uma coleção de ferramentas modulares e reutilizáveis para a construção
+      de compiladores \cite{llvm}. Ele oferece todas as camadas intermediárias de um compilador, bastando o
+      desenvolvedor construir um \textit{front end} que transforma um programa em sua
+      \textit{LLVM Intermediate Representation} \cite{llvmref}.
+
+      O projeto ganhou relevância e teve seu desenvolvimento acelerado com a decisão da Apple Inc. em utilizá-lo como
+      parte integral de suas ferramentas de desenvolvimento para os sistemas operacionais \textit{macOS} e \textit{iOS}.
+      Atualmente o projeto possuí implementações de \textit{front ends} para diversas linguagens de programação e é
+      amplamente utilizado na indústria por sua facilidade de uso, flexibilidade e qualidade de \textit{output}
+      \cite{llvmfeatures}.
+
+      Nas disciplinas MC910 (Construção de Compiladores) e MC911 (Projeto em Compiladores) da Universidade Estadual de
+      Campinas são lecionadas técnicas para a construção de compiladores. Em especial, na disciplina MC911 é dado um
+      projeto para a construção de um compilador para a linguagem de programação Lya \cite{lyagrammar} criada pelo
+      Prof. Márcio M. Pereira.
+
+      Para este estudo dirigido, foi proposto experimentar utilizar ferramentas LLVM na
+      construção de um compilador para a linguagem Lya com o intuito de verificar sua viabilidade e reformular a
+      disciplina MC911.
+
+    \chapter{Objetivo}
+
+      Este estudo dirigido teve como principal objetivo o aprendizado da representação intermediária LLVM e como ela
+      pode ser utilizada com o auxílio das ferramentas LLVM na construção de compiladores para linguagens de
+      programação.
+
+      A representação intermediária LLVM é descrita por conjuntos de instruções da forma
+      SSA (\textit{Static Single Assignment}) em blocos utilizados para a definição de funções e controle de fluxo.
+      Estas características permitem que seja fácil transformar um programa em sua forma
+      AST (\textit{Abstract Syntax Tree}) para a representação intermediária e que, então, otimizadores operem sobre a
+      representação intermediária de forma eficiente e gerem códigos em linguagem de máquina performáticos.
+      Além disso, esta representação é independente de plataforma, permitindo que compiladores que fazem uso do LLVM
+      possuam múltiplas plataformas como \textit{target} com pouco esforço.
+
+      Identificar a viabilidade destas ferramentas para a construção de um compilador para a linguagem Lya e sua
+      facilidade de uso para o ensino permitirá que os alunos que cursarem MC911 aprendam a implementar compiladores
+      de alta performance para qualquer linguagem de programação como é feito por grande parte da indústria, além de
+      facilitar sua entrada em projetos de compiladores já consolidados.
+
+    \chapter{Metodologia}
+
+
+
+      \section{Linguagem Kaleidoscope}
+
+      \section{Análise Sintática}
+
+        \subsection{\textit{Lexer}}
+
+        \subsection{\textit{Parser}}
+
+          \subsubsection{\textit{AST}}
+
+      \section{Análise Semântica}
+
+        \subsection{Visitors}
+
+        \subsection{Enriquecimento da AST}
+
+      \section{Geração de Código \small(\textit{LLVM IR})}
+
+        \subsection{\textit{SSA Form}}
+
+        \subsection{Variáveis Mutáveis}
+
+        \subsection{Operações Aritméticas e Binárias}
+
+        \subsection{Controle de Fluxo}
+
+          \subsubsection{Condicionais}
+
+          \subsubsection{Loops}
+
+        \subsection{Procedimentos}
+
+          \subsubsection{Definição de Procedimentos}
+
+          \subsubsection{Chamadas de Procedimentos}
+
+      \section{\textit{JIT compilation}}
+
+        \subsection{Biblioteca da Linguagem}
+
+    \chapter{Discussão}
+
+      Ao fim deste estudo dirigido obtivemos um compilador funcional para um subconjunto da linguagem Lya utilizando as
+      ferramentas do LLVM através de sua representação intermediária. Este compilador ainda não tem todas as
+      funcionalidades que se espera ter um compilador completo, mas serve como uma boa prova de conceito sobre o que
+      pode ser feito com o uso das ferramentas LLVM.
+
+      A representação intermediária se mostrou bem fácil de ser gerada a partir da AST de um programa, seu conjunto de
+      instruções é sucinto e de fácil entendimento e o projeto LLVM possuí boa documentação. Em contraste, o projeto
+      llvmlite não está tão amadurecido e algumas funcionalidades da representação intermediária são difíceis de serem
+      acessadas através dele como, por exemplo, a definição de constantes de \textit{string}.
+
+      Com a criação de ferramentas auxiliares e uma boa documentação para iniciantes, acreditamos que a aplicação destes
+      aprendizados em futuras turmas de MC911 só irá trazer benefícios aos alunos, deixando-os mais capacitados para
+      trabalharem em projetos fora da disciplina e mais engajados com a disciplina por terem resultados mais rápidos.
+
+    \phantomsection
+    \addcontentsline{toc}{chapter}{Referências Bibliográficas}
+    \bibliographystyle{unsrtnat}
+    \begin{thebibliography}{9}
+
+      \bibitem{llvm}
+      LLVM Developers. LLVM Home Page.\\
+      \texttt{http://llvm.org/}
+
+      \bibitem{llvmref}
+      LLVM Developers. LLVM Language Reference Manual.\\
+      \texttt{http://llvm.org/docs/LangRef.html}
+
+      \bibitem{llvmfeatures}
+      LLVM Developers. LLVM Features.\\
+      \texttt{http://llvm.org/Features.html}
+
+      \bibitem{llvmtutorial}
+      LLVM Developers. LLVM Tutorial.\\
+      \texttt{http://llvm.org/docs/tutorial/index.html}
+
+      \bibitem{lyagrammar}
+      Márcio M. Pereira. Lya BNF Grammar.\\
+      \texttt{https://iviarcio.wordpress.com/lya-bnf-grammar/}
+
+      \bibitem{llvmlitedocs}
+      Numba Developers. llvmlite documentation.\\
+      \texttt{http://llvmlite.readthedocs.io/en/latest/index.html}
+
+      \bibitem{pykaleidoscopegithub}
+      Eli Bendersky. Pykaleidoscope GitHub Repository.\\
+      \texttt{https://github.com/eliben/pykaleidoscope}
+
+      \bibitem{llvmlitebasicusage}
+      Eli Bendersky. Building and using llvmlite - a basic example.\\
+      \texttt{https://eli.thegreenplace.net/2015/building-and-using-llvmlite-a-basic-example}
+
+    \end{thebibliography}
+
+  \end{document}
